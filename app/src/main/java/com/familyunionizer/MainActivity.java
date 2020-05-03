@@ -394,7 +394,7 @@ public class MainActivity extends AppCompatActivity {
     public void onMyFamilyChatButtonClicked(View view) {
         Intent intent = new Intent(this, MyChatActivity.class);
         intent.putExtra("EXTRA_SESSION_USER_NAME", mUsername);
-        intent.putExtra("EXTRA_SESSION_ID", mUid);
+        intent.putExtra("EXTRA_SESSION_ID", mUidFamily);
         startActivity(intent);
     }
 
