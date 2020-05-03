@@ -186,16 +186,16 @@ public class MainActivity extends AppCompatActivity {
                 if (isChecked) {
                     mSendButton.setVisibility(View.INVISIBLE);
                     mMessageEditText.setVisibility(View.INVISIBLE);
-                    mTextBoxMyFamily.setVisibility(View.INVISIBLE);
-                    mTextBoxFamilyId.setVisibility(View.INVISIBLE);
+//                    mTextBoxMyFamily.setVisibility(View.INVISIBLE);
+//                    mTextBoxFamilyId.setVisibility(View.INVISIBLE);
                     mUidFamily = mUid;
                     initializingUserFamilyChatRoom(false);
 
                 } else {
                     mSendButton.setVisibility(View.VISIBLE);
                     mMessageEditText.setVisibility(View.VISIBLE);
-                    mTextBoxMyFamily.setVisibility(View.VISIBLE);
-                    mTextBoxFamilyId.setVisibility(View.VISIBLE);
+//                    mTextBoxMyFamily.setVisibility(View.VISIBLE);
+//                    mTextBoxFamilyId.setVisibility(View.VISIBLE);
                     initializingUserFamilyChatRoom(true);
 
                 }
@@ -307,6 +307,8 @@ public class MainActivity extends AppCompatActivity {
                     userInfo.add(mUsername);
                     userInfo.add(mUidFamily);
                     mDocRefChatRoom.update(mUid, userInfo);
+                    mTextBoxMyFamily.setText(mUidFamily);
+
                 } else {
                     mTextBoxMyFamily.setText("Wrong Family Name");
                 }

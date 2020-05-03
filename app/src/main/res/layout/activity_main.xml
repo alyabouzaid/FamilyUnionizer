@@ -17,8 +17,8 @@
         android:id="@+id/BoxUserId"
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:background="@color/colorPrimary"
-        android:textColor="@android:color/black"
+        android:background="@color/colorPrimaryDark"
+        android:textColor="@android:color/white"
         android:gravity="center"
         android:textSize="20dp"
         android:text="User Id"
@@ -29,23 +29,51 @@
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_below="@id/BoxUserId"
-        android:background="@color/colorPrimary"
-        android:textColor="@android:color/black"
+        android:background="@color/colorPrimaryDark"
+        android:textColor="@android:color/white"
         android:gravity="center"
         android:textSize="20dp"
         />
+
+
+    <TextView
+        android:id="@+id/BoxmyFamilyId"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_below="@id/textBoxUserId"
+        android:background="@color/colorPrimaryDark"
+        android:textColor="@android:color/white"
+        android:gravity="center"
+        android:textSize="20dp"
+        android:layout_marginTop="10dp"
+        android:text="Current Family Head's Id"
+        />
+
+    <TextView
+        android:id="@+id/myFamilyBox"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_below="@id/BoxmyFamilyId"
+        android:background="@color/colorPrimaryDark"
+        android:textColor="@android:color/white"
+        android:gravity="center"
+        android:textSize="20dp"
+        />
+
 
     <Switch
         android:id="@+id/enable_switch"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/textBoxUserId"
+        android:layout_below="@id/myFamilyBox"
         android:layout_gravity="center"
-        android:background="@color/colorPrimary"
+        android:background="@color/colorPrimaryDark"
         android:text="Are You The Family Head?"
         android:gravity="center"
         android:layout_marginTop="10dp"
         android:textSize="20dp"
+        android:textColor="@android:color/white"
+
         />
 
     <Button
@@ -53,7 +81,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@+id/enable_switch"
-        android:background="@color/colorPrimary"
+        android:background="@color/colorPrimaryDark"
         android:onClick="onMyFamilyChatButtonClicked"
         android:text="Family Chat Room"
         android:textAppearance="@style/TextAppearance.AppCompat.Button"
@@ -67,11 +95,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@+id/myFamilyButtton"
-        android:background="@color/colorPrimary"
+        android:background="@color/colorPrimaryDark"
         android:onClick="onAddPlaceButtonClicked"
         android:text="Family Map"
         android:textAppearance="@style/TextAppearance.AppCompat.Button"
-        android:textColor="@android:color/white" />
+        android:textColor="@android:color/white"
+        android:layout_marginTop="10dp"
+        />
 
 
 
@@ -82,7 +112,10 @@
         android:layout_below="@id/buttton"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:layout_marginTop="10dp"
+        >
+
 
         <EditText
             android:id="@+id/messageEditText"
@@ -98,31 +131,13 @@
             android:layout_gravity="bottom"
             android:enabled="true"
             android:onClick="onFamilyIdButtonClicked"
-            android:text="Update Family Id "/>
+            android:text="Update Family Id "
+            android:textColor="@android:color/black"
+            android:background="@color/colorAccent"/>
 
     </LinearLayout>
 
 
-    <TextView
-        android:id="@+id/BoxmyFamilyId"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_below="@id/linearLayout"
-        android:background="@color/colorPrimary"
-        android:textColor="@android:color/black"
-        android:gravity="center"
-        android:textSize="20dp"
-        android:text="Current Family Head's Id"
-        />
 
-    <TextView
-        android:id="@+id/myFamilyBox"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_below="@id/BoxmyFamilyId"
-        android:background="@color/colorPrimary"
-        android:textColor="@android:color/black"
-        android:gravity="center"
-        android:textSize="20dp" />
 
 </RelativeLayout>
