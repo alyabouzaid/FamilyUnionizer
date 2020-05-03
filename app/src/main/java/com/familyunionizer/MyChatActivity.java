@@ -1,77 +1,43 @@
 package com.familyunionizer;
 
 import android.content.Intent;
-import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class MyChatActivity extends AppCompatActivity {
 
-    private static final String TAG = "MainActivity";
-
-    public static final String ANONYMOUS = "anonymous";
     public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
-    public static final String FRIENDLY_MSG_LENGTH_KEY = "friendly_msg_length";
-    public static final String FAKE_LOCATION = "6666";
-    Map<String, Object> map;
 
 
-    public static final int RC_SIGN_IN = 1;
     private static final int RC_PHOTO_PICKER = 2;
 
     private MessageAdapter mMessageAdapter;
 
-
-    //mybox
-    ArrayAdapter<String> adapter;
-    private ListView mLocationListView;
-    ArrayList<String> listItems = new ArrayList<String>();
-
-    //location
-    private static final int PERMISSIONS_REQUEST_FINE_LOCATION = 111;
-    private Location mLastKnownLocation;
-    private boolean mLocationPermissionGranted;
-    private FusedLocationProviderClient mFusedLocationProviderClient;
-    private LocationCallback locationCallback;
-
-    //map
-    private MapFragment mapFragment;
-    private GoogleMap mMap;
-    Map<String, Object> mapTransfer;
 
 
     private ListView mMessageListView;
@@ -79,21 +45,17 @@ public class MyChatActivity extends AppCompatActivity {
     private ImageButton mPhotoPickerButton;
     private EditText mMessageEditText;
     private Button mSendButton;
-    private TextView mTextBox;
 
     private String mUsername;
-    private String mUid="lkl";
+    private String mUid;
 
 
 
     private FirebaseDatabase mFirebaseDatabase;
     private DatabaseReference mMessagesDatabaseReference;
     private ChildEventListener mChildEventListener;
-    private FirebaseAuth mFirebaseAuth;
-    private FirebaseAuth.AuthStateListener mAuthStateListener;
     private FirebaseStorage mFirebaseStorage;
     private StorageReference mChatPhotosStorageReference;
-    private FirebaseRemoteConfig mFirebaseRemoteConfig;
 
 
 
@@ -103,53 +65,44 @@ public class MyChatActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_my_chat);
 
-        mUsername = getIntent().getStringExtra("EXTRA_SESSION_USER_NAME");
-        mUid = getIntent().getStringExtra("EXTRA_SESSION_ID");
+        GetUserIdAndNameFromPreviousActivity();
+
+        InitializeFirebase();
+
+        InitializeReferenceViews();
+
+        GetReferencesToRealtimeDatabaseAndPhotos();
+
+        InitializeListViewAndAdapter();
+
+        InitializeProgressbar();
+
+        OnClickListenerForPhotoPicker();
+
+        MessageTextboxListenerToSetSendButtonEnabledAndLimitTextSize();
+
+        OnClickListenerForSendButton();
+
+        ActivateRealtimeFetching();
 
 
-        // instantiate realtime database
-        mFirebaseDatabase = FirebaseDatabase.getInstance();
-        // instantiate storage database
-        mFirebaseStorage = FirebaseStorage.getInstance();
+    }
 
-        // Initialize references to views
-
-        mMessageListView = (ListView) findViewById(R.id.messageListView);
-        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
-        mPhotoPickerButton = (ImageButton) findViewById(R.id.photoPickerButton);
-        mMessageEditText = (EditText) findViewById(R.id.messageEditText);
-        mSendButton = (Button) findViewById(R.id.sendButton);
-
-
-        //getting the ref of the real time database title,which happens to be messages here
-        mMessagesDatabaseReference = mFirebaseDatabase.getReference().child(mUid);
-        //getting the ref of the storage database title, which happes to be chat_photos here
-        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("chat_photos");
-
-
-        // Initialize message ListView and its adapter
-        List<FriendlyMessage> friendlyMessages = new ArrayList<>();
-        mMessageAdapter = new MessageAdapter(this, R.layout.item_message, friendlyMessages);
-        mMessageListView.setAdapter(mMessageAdapter);
-
-        // Initialize progress bar
-        mProgressBar.setVisibility(ProgressBar.INVISIBLE);
-
-        // ImagePickerButton shows an image picker to upload a image for a message
-        mPhotoPickerButton.setOnClickListener(new View.OnClickListener() {
+    private void OnClickListenerForSendButton() {
+        mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString(), mUsername, null);
+                mMessagesDatabaseReference.push().setValue(friendlyMessage);
 
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("image/jpeg");
-                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-                startActivityForResult(Intent.createChooser(intent, "Complete action using"), RC_PHOTO_PICKER);
-
-
+                if (mMessageEditText.length() > 0) {
+                    mMessageEditText.getText().clear();
+                }
             }
         });
+    }
 
-        // Enable Send button when there's text to send
+    private void MessageTextboxListenerToSetSendButtonEnabledAndLimitTextSize() {
         mMessageEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -169,32 +122,58 @@ public class MyChatActivity extends AppCompatActivity {
             }
         });
         mMessageEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(DEFAULT_MSG_LENGTH_LIMIT)});
+    }
 
-
-        // Send button sends a message and clears the EditText
-        mSendButton.setOnClickListener(new View.OnClickListener() {
+    private void OnClickListenerForPhotoPicker() {
+        mPhotoPickerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                // TODO: Send messages on click
-                FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString(), mUsername, null);
-                mMessagesDatabaseReference.push().setValue(friendlyMessage);
 
-                // Clear input box
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("image/jpeg");
+                intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+                startActivityForResult(Intent.createChooser(intent, "Complete action using"), RC_PHOTO_PICKER);
 
-                if (mMessageEditText.length() > 0) {
-                    mMessageEditText.getText().clear();
-                }
-                //mMessageEditText.setText("");
+
             }
         });
+    }
 
+    private void InitializeProgressbar() {
+        mProgressBar.setVisibility(ProgressBar.INVISIBLE);
+    }
 
-        //// To activate realtime fetching
+    private void InitializeListViewAndAdapter() {
+        List<FriendlyMessage> friendlyMessages = new ArrayList<>();
+        mMessageAdapter = new MessageAdapter(this, R.layout.item_message, friendlyMessages);
+        mMessageListView.setAdapter(mMessageAdapter);
+    }
 
+    private void GetReferencesToRealtimeDatabaseAndPhotos() {
+        //getting the ref of the real time database title,which happens to be messages here
+        mMessagesDatabaseReference = mFirebaseDatabase.getReference().child(mUid);
+        //getting the ref of the storage database title, which happes to be chat_photos here
+        mChatPhotosStorageReference = mFirebaseStorage.getReference().child("chat_photos");
+    }
 
-        attachDatabaseReadListener();
+    private void GetUserIdAndNameFromPreviousActivity() {
+        mUsername = getIntent().getStringExtra("EXTRA_SESSION_USER_NAME");
+        mUid = getIntent().getStringExtra("EXTRA_SESSION_ID");
+    }
 
+    private void InitializeFirebase() {
+        // instantiate realtime database
+        mFirebaseDatabase = FirebaseDatabase.getInstance();
+        // instantiate storage database
+        mFirebaseStorage = FirebaseStorage.getInstance();
+    }
 
+    private void InitializeReferenceViews() {
+        mMessageListView = (ListView) findViewById(R.id.messageListView);
+        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
+        mPhotoPickerButton = (ImageButton) findViewById(R.id.photoPickerButton);
+        mMessageEditText = (EditText) findViewById(R.id.messageEditText);
+        mSendButton = (Button) findViewById(R.id.sendButton);
     }
 
 
@@ -239,7 +218,7 @@ public class MyChatActivity extends AppCompatActivity {
     // it starts with the device and keeps getting called whenever there is something added.
     // just like the listeners in the on create, they stay there.
 
-    private void attachDatabaseReadListener() {
+    private void ActivateRealtimeFetching() {
         if (mChildEventListener == null) {
             mChildEventListener = new ChildEventListener() {
                 @Override

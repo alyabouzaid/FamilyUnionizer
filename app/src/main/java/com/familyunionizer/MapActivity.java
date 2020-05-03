@@ -45,8 +45,12 @@ import java.util.ArrayList;
 import java.util.Map;
 
 public class MapActivity extends AppCompatActivity implements OnMapReadyCallback {
+
+    public static final String TAG = MapActivity.class.getSimpleName();
+
+
+    //map
     private GoogleMap mMap;
-    private LatLng sydney = new LatLng(-8.579892, 116.095239);
     private MapFragment mapFragment;
 
 
@@ -56,52 +60,39 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private boolean mLocationPermissionGranted;
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private LocationCallback locationCallback;
-    // document
-    final DocumentReference mDocRef = FirebaseFirestore.getInstance().document("location/data");
+
+    // Firebase documents
+    final DocumentReference mDocRefLocation = FirebaseFirestore.getInstance().document("location/data");
+    final DocumentReference mDocRefChatRoom = FirebaseFirestore.getInstance().document("chatroom/data");
 
 
-    // A default location (Sydney, Australia) and default zoom to use when location permission is
-    // not granted.
-
-
-    private static final int AUTOCOMPLETE_REQUEST_CODE = 1;
-    public static final String TAG = MainActivity.class.getSimpleName();
-
-
-    private final LatLng mDefaultLocation = new LatLng(-33.8523341, 151.2106085);
-    private static final int DEFAULT_ZOOM = 15;
-    private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
-
+    //user data
     private String mUid;
     private String mUidFamily;
-
-    final DocumentReference mDocRefChatRoom = FirebaseFirestore.getInstance().document("chatroom/data");
+    private String mUsername;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-
         setContentView(R.layout.activity_maps);
 
-        mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
-        mapFragment.getMapAsync(MapActivity.this);
 
+        GetUserIdAndNameFromPreviousActivity();
 
-        mUid = getIntent().getStringExtra("EXTRA_SESSION_ID");
-        mUidFamily = getIntent().getStringExtra("EXTRA_SESSION_FAMILY_ID");
+        GetMapItemFromLayoutAndGetMapAsync();
 
+        GettingLocationServicesOnThisActivity();
 
-        //////////////////////////////////////
-        // Location
-        //////////////////////////////////////
-        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        GettingLocationPermisionInCaseItWasntThere();
 
-        getLocationPermission();
-        getDeviceLocation();
+        GetDeviceLocation();
 
+        GettingLocationCallBackFunctionInitialization();
+
+    }
+
+    private void GettingLocationCallBackFunctionInitialization() {
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
@@ -111,83 +102,16 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 for (Location location : locationResult.getLocations()) {
                     mLastKnownLocation = location;
 
-                    mDocRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    UpdatingTheCurrentUserLocationToMap();
+
+                    mDocRefLocation.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                         @Override
                         public void onSuccess(DocumentSnapshot documentSnapshot) {
                             if (documentSnapshot.exists()) {
-                                final Map<String, Object> mapUsers = documentSnapshot.getData();
-                                ArrayList<Double> location = new ArrayList<>();
-                                location.add(mLastKnownLocation.getLatitude());
-                                location.add(mLastKnownLocation.getLongitude());
-                                String mUsername = getIntent().getStringExtra("EXTRA_SESSION_ID");
 
-                                mapUsers.put(mUsername, location);
-                                Log.d(TAG, "loooop" + mLastKnownLocation + "elwa");
+                                final Map<String, Object> MapOfUserLocations = documentSnapshot.getData();
 
-                                mMap.clear();
-                                //isUserInFamily();
-                              mDocRef.update(mUsername,location);
-
-
-                                mDocRefChatRoom.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-
-
-                                    @Override
-                                    public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                        if (documentSnapshot.exists()) {
-                                            Log.d(TAG, "loooop" + "amber");
-
-                                            Map<String, Object> map = documentSnapshot.getData();
-                                            ArrayList<String> arrayList;
-
-
-                                            for (Map.Entry<String, Object> entry : mapUsers.entrySet()) {
-
-                                                ArrayList<Double> longitudeLantitude = (ArrayList<Double>) entry.getValue();
-                                                arrayList = (ArrayList<String>) map.get(entry.getKey());
-
-                                                Log.v(String.valueOf(longitudeLantitude.get(0)), "hhhhh");
-                                                Log.v(mUidFamily, "hhhhh");
-
-                                                if (arrayList != null) {
-                                                    if (arrayList.get(1).equals(mUidFamily)) {
-                                                        if (longitudeLantitude.get(0) != null && longitudeLantitude.get(1) != null) {
-                                                            mMap.addMarker(new MarkerOptions()
-                                                                    .title(entry.getKey())
-                                                                    .position(new LatLng(longitudeLantitude.get(0), longitudeLantitude.get(1)))
-                                                                    .snippet("No places found, because location permission is disabled.")
-                                                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-                                                        }
-                                                    }
-                                                }
-
-                                            }
-
-
-                                        }
-                                    }
-                                });
-//                                for (Map.Entry<String, Object> entry : map.entrySet()) {
-//
-//                                    ArrayList<Double> longitudeLantitude = (ArrayList<Double>) entry.getValue();
-//
-//
-//                                    if (entry.getKey() ==) {
-//
-//                                    }
-//
-                                mDocRef.update(mUsername, location);
-//
-//                                    if (longitudeLantitude.get(0) != null && longitudeLantitude.get(1) != null) {
-//                                        mMap.addMarker(new MarkerOptions()
-//                                                .title(entry.getKey())
-//                                                .position(new LatLng(longitudeLantitude.get(0), longitudeLantitude.get(1)))
-//                                                .snippet("No places found, because location permission is disabled.")
-//                                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-//                                    }
-//
-//                                }
-
+                                GettingNamesOfUsersAndPlottingThemAccodingToTheirLocation(MapOfUserLocations);
 
                             }
                         }
@@ -199,22 +123,71 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
             ;
         };
+    }
 
+    private void UpdatingTheCurrentUserLocationToMap() {
+        ArrayList<Double> location = new ArrayList<>();
+        location.add(mLastKnownLocation.getLatitude());
+        location.add(mLastKnownLocation.getLongitude());
+        mDocRefLocation.update(mUsername,location);
+    }
+
+    private void GettingNamesOfUsersAndPlottingThemAccodingToTheirLocation(final Map<String, Object> mapOfUserLocations) {
+        mMap.clear();
+        mDocRefChatRoom.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+            @Override
+            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                if (documentSnapshot.exists()) {
+                    Map<String, Object> MapOfUserChatRooms = documentSnapshot.getData();
+                    ArrayList<String> ArrayOfChatRoomForASpecificUser;
+
+                    for (Map.Entry<String, Object> entry : mapOfUserLocations.entrySet()) {
+
+                        ArrayList<Double> longitudeLantitude = (ArrayList<Double>) entry.getValue();
+                        ArrayOfChatRoomForASpecificUser = (ArrayList<String>) MapOfUserChatRooms.get(entry.getKey());
+                        if (ArrayOfChatRoomForASpecificUser != null) {
+                            if (ArrayOfChatRoomForASpecificUser.get(1).equals(mUidFamily)) {
+                                if (longitudeLantitude.get(0) != null && longitudeLantitude.get(1) != null) {
+                                    mMap.addMarker(new MarkerOptions()
+                                            .title(entry.getKey())
+                                            .position(new LatLng(longitudeLantitude.get(0), longitudeLantitude.get(1)))
+                                            .snippet("No places found, because location permission is disabled.")
+                                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                                }
+                            }
+                        }
+
+                    }
+
+                }
+            }
+        });
+    }
+
+    private void GettingLocationServicesOnThisActivity() {
+        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+    }
+
+    private void GetMapItemFromLayoutAndGetMapAsync() {
+        mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
+        mapFragment.getMapAsync(MapActivity.this);
+    }
+
+    private void GetUserIdAndNameFromPreviousActivity() {
+        mUid = getIntent().getStringExtra("EXTRA_SESSION_ID");
+        mUidFamily = getIntent().getStringExtra("EXTRA_SESSION_FAMILY_ID");
+        mUsername = getIntent().getStringExtra("EXTRA_SESSION_ID");
 
     }
 
 
-    private void isUserInFamily() {
+    /*
+     * Request location permission, so that we can get the location of the
+     * device. The result of the permission request is handled by a callback,
+     * onRequestPermissionsResult.
+     */
 
-
-    }
-
-    private void getLocationPermission() {
-        /*
-         * Request location permission, so that we can get the location of the
-         * device. The result of the permission request is handled by a callback,
-         * onRequestPermissionsResult.
-         */
+    private void GettingLocationPermisionInCaseItWasntThere() {
         mLocationPermissionGranted = false;
         if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
                 android.Manifest.permission.ACCESS_FINE_LOCATION)
@@ -227,11 +200,11 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
-    private void getDeviceLocation() {
-        /*
-         * Get the best and most recent location of the device, which may be null in rare
-         * cases when a location is not available.
-         */
+    /*
+     * Get the best and most recent location of the device, which may be null in rare
+     * cases when a location is not available.
+     */
+    private void GetDeviceLocation() {
         try {
             if (mLocationPermissionGranted) {
                 Task<Location> locationResult = mFusedLocationProviderClient.getLastLocation();
@@ -240,15 +213,10 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     public void onComplete(@NonNull Task<Location> task) {
                         if (task.isSuccessful()) {
                             mLastKnownLocation = task.getResult();
-
-
                         } else {
                             Log.d(TAG, "Current location is null. Using defaults.");
                             Log.e(TAG, "Exception: %s", task.getException());
-//                            mMap.moveCamera(CameraUpdateFactory
-//                                    .newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
                         }
-
                     }
                 });
             }
@@ -261,112 +229,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
-        // Enable the zoom controls for the map
         mMap.getUiSettings().setZoomControlsEnabled(true);
-
-        // pick current location
-
-
-        mDocRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-            @Override
-            public void onSuccess(DocumentSnapshot documentSnapshot) {
-                if (documentSnapshot.exists()) {
-                    Map<String, Object> map = documentSnapshot.getData();
-                    ArrayList<Double> location = new ArrayList<>();
-                    location.add(mLastKnownLocation.getLatitude());
-                    location.add(mLastKnownLocation.getLongitude());
-
-                    map.put(mUid, location);
-                    Log.d(TAG, "loooop");
-
-
-                    mDocRef.set(map).addOnSuccessListener(new OnSuccessListener<Void>() {
-                        @Override
-                        public void onSuccess(Void aVoid) {
-                            Log.d(TAG, "Document has been saved");
-                        }
-                    }).addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            Log.d(TAG, "Document was not saved", e);
-
-                        }
-                    });
-
-                }
-            }
-        });
-
-
-        mDocRef.addSnapshotListener(this, new EventListener<DocumentSnapshot>() {
-            @Override
-            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
-                if (documentSnapshot.exists()) {
-                    final Map<String, Object> mapUsers = documentSnapshot.getData();
-
-                    mMap.clear();
-
-                    mDocRefChatRoom.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-
-
-                        @Override
-                        public void onSuccess(DocumentSnapshot documentSnapshot) {
-                            if (documentSnapshot.exists()) {
-                                Log.d(TAG, "loooop" + "amber");
-
-                                Map<String, Object> map = documentSnapshot.getData();
-                                ArrayList<String> arrayList;
-
-
-                                for (Map.Entry<String, Object> entry : mapUsers.entrySet()) {
-
-                                    ArrayList<Double> longitudeLantitude = (ArrayList<Double>) entry.getValue();
-                                    arrayList = (ArrayList<String>) map.get(entry.getKey());
-
-                                    Log.v(String.valueOf(longitudeLantitude.get(0)), "hhhhh");
-                                    Log.v(mUidFamily, "hhhhh");
-
-                                    if (arrayList != null) {
-                                        if (arrayList.get(1).equals(mUidFamily)) {
-                                            if (longitudeLantitude.get(0) != null && longitudeLantitude.get(1) != null) {
-                                                mMap.addMarker(new MarkerOptions()
-                                                        .title(entry.getKey())
-                                                        .position(new LatLng(longitudeLantitude.get(0), longitudeLantitude.get(1)))
-                                                        .snippet("No places found, because location permission is disabled.")
-                                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-                                            }
-                                        }
-                                    }
-
-                                }
-
-
-                            }
-                        }
-                    });
-
-
-
-//                    for (Map.Entry<String, Object> entry : map.entrySet()) {
-//
-//                        ArrayList<Double> longitudeLantitude = (ArrayList<Double>) entry.getValue();
-//
-//
-//                        if (longitudeLantitude.get(0) != null && longitudeLantitude.get(1) != null) {
-//                            mMap.addMarker(new MarkerOptions()
-//                                    .title(entry.getKey())
-//                                    .position(new LatLng(longitudeLantitude.get(0), longitudeLantitude.get(1)))
-//                                    .snippet("No places found, because location permission is disabled.")
-//                                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-//                        }
-//
-//                    }
-                }
-            }
-        });
-
-
     }
 
 

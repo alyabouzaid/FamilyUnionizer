@@ -60,18 +60,7 @@
         android:textColor="@android:color/white"
         android:layout_marginTop="10dp"/>
 
-    <Button
-        android:id="@+id/myChatButtton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/myFamilyButtton"
-        android:background="@color/colorPrimary"
-        android:onClick="onMyChatButtonClicked"
-        android:text="My Chat Room"
-        android:textAppearance="@style/TextAppearance.AppCompat.Button"
-        android:textColor="@android:color/white"
-        android:visibility="invisible"
-        />
+
 
     <Button
         android:id="@+id/buttton"
